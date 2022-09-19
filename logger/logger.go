@@ -9,7 +9,7 @@ import (
 
 type FormatInterface interface {
 	CommonInterface
-	Format(category string, uuid string, message string, v ...interface{}) *PrepareInterface
+	Format(category string, uuid string, message string, v ...interface{}) *CategoryFormat // @TODO change to interface
 }
 
 type CommonInterface interface {
