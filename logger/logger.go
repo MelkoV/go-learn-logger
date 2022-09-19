@@ -74,19 +74,19 @@ func (cf *CategoryFormat) Debug() {
 }
 
 func (cf *CategoryFormat) Info() {
-	cf.logger.Debug(cf.message)
+	cf.logger.Info(cf.message)
 }
 
 func (cf *CategoryFormat) Warning() {
-	cf.logger.Debug(cf.message)
+	cf.logger.Warning(cf.message)
 }
 
 func (cf *CategoryFormat) Error() {
-	cf.logger.Debug(cf.message)
+	cf.logger.Error(cf.message)
 }
 
 func (cf *CategoryFormat) Fatal() {
-	cf.logger.Debug(cf.message)
+	cf.logger.Fatal(cf.message)
 }
 
 type CategoryLogger struct {
