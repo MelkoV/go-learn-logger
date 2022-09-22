@@ -7,25 +7,14 @@ import (
 	"time"
 )
 
-type FormatInterface interface {
-	CommonInterface
-	Format(category string, uuid string, message string, v ...interface{}) *CategoryFormat // @TODO change to interface
-}
-
-type CommonInterface interface {
-	Debug(message string)
-	Info(message string)
-	Warning(message string)
-	Error(message string)
-	Fatal(message string)
-}
-
-type PrepareInterface interface {
-	Debug()
-	Info()
-	Warning()
-	Error()
-	Fatal()
+type CategoryLogger interface {
+	WithUuid(uuid string) CategoryLogger
+	AddSubCategory(subCategory string) CategoryLogger
+	Debug(message string, v ...interface{})
+	Info(message string, v ...interface{})
+	Warning(message string, v ...interface{})
+	Error(message string, v ...interface{})
+	Fatal(message string, v ...interface{})
 }
 
 type StreamInterface interface {
@@ -64,63 +53,45 @@ func (st *StreamLog) fatalStream() *log.Logger {
 	return st.fatalLog
 }
 
-type CategoryFormat struct {
-	logger  *CategoryLogger
-	message string
+type ImplCategoryLogger struct {
+	category string
+	uuid     string
+	stream   StreamInterface
 }
 
-func (cf *CategoryFormat) Debug() {
-	cf.logger.Debug(cf.message)
+func (l *ImplCategoryLogger) WithUuid(uuid string) CategoryLogger {
+	return NewCategoryLogger(l.category, uuid, l.stream)
 }
 
-func (cf *CategoryFormat) Info() {
-	cf.logger.Info(cf.message)
+func (l *ImplCategoryLogger) AddSubCategory(subCategory string) CategoryLogger {
+	c := fmt.Sprintf("%s/%s", l.category, subCategory)
+	return NewCategoryLogger(c, l.uuid, l.stream)
 }
 
-func (cf *CategoryFormat) Warning() {
-	cf.logger.Warning(cf.message)
+func (l *ImplCategoryLogger) Debug(message string, v ...interface{}) {
+	l.stream.debugStream().Println(l.format(message, v))
 }
 
-func (cf *CategoryFormat) Error() {
-	cf.logger.Error(cf.message)
+func (l *ImplCategoryLogger) Info(message string, v ...interface{}) {
+	l.stream.infoStream().Println(l.format(message, v))
 }
 
-func (cf *CategoryFormat) Fatal() {
-	cf.logger.Fatal(cf.message)
+func (l *ImplCategoryLogger) Warning(message string, v ...interface{}) {
+	l.stream.warningStream().Println(l.format(message, v))
 }
 
-type CategoryLogger struct {
-	stream       StreamInterface
-	rootCategory string
+func (l *ImplCategoryLogger) Error(message string, v ...interface{}) {
+	l.stream.errorStream().Println(l.format(message, v))
 }
 
-func (cl *CategoryLogger) Format(category string, uuid string, message string, v ...interface{}) *CategoryFormat {
-	msg := fmt.Sprintf(message, v...)
+func (l *ImplCategoryLogger) Fatal(message string, v ...interface{}) {
+	l.stream.fatalStream().Println(l.format(message, v))
+}
+
+func (l *ImplCategoryLogger) format(message string, v ...interface{}) string {
+	m := fmt.Sprintf(message, v)
 	t := time.Now()
-	return &CategoryFormat{
-		logger:  cl,
-		message: fmt.Sprintf("[%s][%s][%s/%s] %s", t.Format("2006-01-02 15:04:05"), uuid, cl.rootCategory, category, msg),
-	}
-}
-
-func (cl *CategoryLogger) Debug(message string) {
-	cl.stream.debugStream().Println(message)
-}
-
-func (cl *CategoryLogger) Info(message string) {
-	cl.stream.infoStream().Println(message)
-}
-
-func (cl *CategoryLogger) Warning(message string) {
-	cl.stream.warningStream().Println(message)
-}
-
-func (cl *CategoryLogger) Error(message string) {
-	cl.stream.errorStream().Println(message)
-}
-
-func (cl *CategoryLogger) Fatal(message string) {
-	cl.stream.fatalStream().Println(message)
+	return fmt.Sprintf("[%s][%s][%s] %s", t.Format("2006-01-02 15:04:05"), l.uuid, l.category, m)
 }
 
 func NewStreamLog() *StreamLog {
@@ -133,10 +104,11 @@ func NewStreamLog() *StreamLog {
 	}
 }
 
-func NewCategoryLogger(rootCategory string, stream StreamInterface) *CategoryLogger {
-	l := &CategoryLogger{
-		stream:       stream,
-		rootCategory: rootCategory,
+func NewCategoryLogger(category string, uuid string, stream StreamInterface) CategoryLogger {
+	l := &ImplCategoryLogger{
+		stream:   stream,
+		category: category,
+		uuid:     uuid,
 	}
 	return l
 }
